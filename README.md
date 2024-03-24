@@ -1,7 +1,7 @@
-Task Overview
+# Task Overview
 
-# research machine learning
-# train AI model in Python
++ research machine learning
++ train AI model in Python
 
 2 Platforms: 
 1. OANDA
