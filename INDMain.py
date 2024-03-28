@@ -2,7 +2,7 @@ import pandas as pd
 import pandas_ta as ta
 import pandas as pd
 import numpy as np
-import plotly.graph_objects
+import plotly.graph_objects as go
 from scipy import stats
 
 df = pd.read_csv("EURUSD_Candlestick_1_Hour_BID_04.05.2020-15.04.2023.csv")
@@ -53,3 +53,38 @@ def isPivot(candle, window):
     if (pivotHigh and pivotLow):
         return 3
     elif pivotHigh:
+        return pivotHigh
+    elif pivotLow:
+        return pivotLow
+    else:
+        return 0
+    
+
+# window size
+window = 10
+df['isPivot'] = df.apply(lambda x: isPivot(x.name,window), axis=1)
+
+def pointpos(x):
+    if x['isPivot'] == 2:
+        return x['low']-1e-3
+    elif x['isPivot'] == 1:
+        return x['isPivot']+le-3
+    else:
+        return np.nan
+df['pointpos'] = df.apply(lambda row: pointpos(row), axis=1)
+
+
+# new section
+dfpl = df[300:500]
+fig = go.figure(data=[go.Candlestick(x=dfpl.index,
+                open=dfpl['open'],
+                high=dfpl['high'],
+                low=dfpl['low'],
+                close=dfpl['close'])])
+
+fig.add_scatter(x=dfpl.index, y=dfpl['pointpos'], mode="markers",
+                marker=dict(size=5, color="MediumPurple"),
+                name="pivot")
+fig.update_layout(xaxis_rangeslider_visible=False)
+fig.show()
+
