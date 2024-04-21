@@ -5,6 +5,7 @@ import mplfinance as mpf
 import scipy
 import math
 import pandas_ta as ta
+#from AVtest import data
 
 # Consructs market profile using logarithmic pricing
 # first_w varies weightage of prices depending on length of time from present
@@ -131,18 +132,21 @@ if __name__ == '__main__':
     # Trend following strategy
     # "D:\Downloads\EURUSD_Candlestick_1_D_BID_05.05.2003-28.10.2023.csv"
     # "D:\Downloads\BTCUSDT86400.csv"
-    data = pd.read_csv(r"D:\Downloads\BTCUSDT86400.csv", nrows = 100)
+    # "D:\Downloads\tesla-stock-price.csv"
+    data = pd.read_csv(r"D:\Downloads\tesla-stock-price.csv")
     data['date'] = data['date'].astype('datetime64[s]')
     data = data.set_index('date')
     plt.style.use('dark_background') 
     levels = support_resistance_levels(data, 365, first_w=0.1, atr_mult=1.0)
-    
 
     data['sr_signal'] = sr_penetration_signal(data, levels)
     data['log_ret'] = np.log(data['close']).diff().shift(-1)
     data['sr_return'] = data['sr_signal'] * data['log_ret']
 
     long_trades, short_trades = get_trades_from_signal(data, data['sr_signal'].to_numpy())
+
+    long_profit = float(round(sum(long_trades['profit']),2))
+    short_profit = float(round(sum(short_trades['profit']),2))
     #print(data)
 
 def test_trades():
@@ -151,8 +155,9 @@ def test_trades():
     print("")
     print("Short Trades")
     print (short_trades)
-    print("Long Trades: $"+str(round(sum(long_trades['profit']),2)))
-    print("Short Trades: $"+str(round(sum(short_trades['profit']),2)))
+    print("Long Trades: $"+str(long_profit))
+    print("Short Trades: $"+str(short_profit))
+    print("Profit: $"+str(long_profit + short_profit))
 
 def plotting():
     # Plot closing prices
@@ -181,6 +186,6 @@ def plotting():
     plt.grid(True)
     plt.show()
 
-#test_trades()
+test_trades()
 #plotting()
 

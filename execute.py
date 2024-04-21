@@ -9,3 +9,10 @@ import pandas_ta as ta
 
 # Plug in AV input into data
 # long_trades, short_trades = get_trades_from_signal(data, data['sr_signal'].to_numpy())
+'''
+git status
+git branch -c [insert branch name]
+git add -m or git add . to add all
+git commit -m "insert text"
+git commit origin head
+'''
