@@ -1,90 +1,186 @@
-import pandas as pd 
-import pandas_ta as ta
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from scipy import stats
+import matplotlib.pyplot as plt
+import mplfinance as mpf
+import scipy
+import math
+import pandas_ta as ta
 
-df = pd.read_csv("EURUSD_Candlestick_1_Hour_BID_04.05.2020-15.04.2023.csv")
-df = df[df['volume']!=0]
-df.reset_index(drop=True, inplace=True)
+# Consructs market profile using logarithmic pricing
+# first_w varies weightage of prices depending on length of time from present
+# atr_mult affects smoothing of KDE
+# As prom_thresh >, only resistance levels with greater significance taken 
+def find_levels( 
+        price: np.array, atr: float, # Log closing price, and log atr 
+        first_w: float = 0.1, 
+        atr_mult: float = 1.0, 
+        prom_thresh: float = 0.05
+):
 
-df['EMA'] = ta.ema(df.close, length=150)
-df.tail()
+    # Setup weights
+    last_w = 1.0
+    w_step = (last_w - first_w) / len(price)
+    weights = first_w + np.arange(len(price)) * w_step
+    weights[weights < 0] = 0.0
 
-df=df[0:5000]
+    # Get kernel of price. 
+    # bw_method = bandwidth of KDE
+    kernal = scipy.stats.gaussian_kde(price, bw_method=atr*atr_mult, weights=weights)
+
+    # Construct market profile
+    # Step constructs grid with 200 equal spacings between max/min price
+    min_v = np.min(price)
+    max_v = np.max(price)
+    step = (max_v - min_v) / 200
+    price_range = np.arange(min_v, max_v, step)
+    pdf = kernal(price_range) # Market profile
+
+    # Find significant peaks in the market profile
+    pdf_max = np.max(pdf)
+    prom_min = pdf_max * prom_thresh
+
+    peaks, props = scipy.signal.find_peaks(pdf, prominence=prom_min)
+    levels = [] 
+    for peak in peaks:
+        levels.append(np.exp(price_range[peak]))
+
+    return levels, peaks, props, price_range, pdf, weights
 
 
-#Trend detection
 
-EMAsignal = [0]*len(df)
-backcandles = 15
-for row in range(backcandles, len(df)):
-    upt = 1
-    dnt = 1
-    for i in range(row-backcandles, row+1):
-        if max(df.open[i], df.close[i])>=df.EMA[i]:
-            dnt = 0
-        if min(df.open[i], df.close[i])<=df.EMA[i]:
-            upt = 0
-    if upt==1 and dnt==1:
-        EMAsignal[row]=3
-    elif upt==1:
-        EMAsignal[row]=2
-    elif dnt==1:
-        EMAsignal[row]=1
 
-df['EMASignal'] = EMAsignal
+def support_resistance_levels(
+        data: pd.DataFrame, lookback: int, 
+        first_w: float = 0.1, atr_mult:float=1.0, prom_thresh:float =0.05
+):
 
-def isPivot(candle, window):
-    # function that detects if a candle is a pivot/fractal point
-    # args: candle index, window before and after candle to test if pivot
-    # returns: 1 if pivot high, 2 if pivot low, 3 if both and a default
-    if candle-window < 0 or candle+window >= len(df):
-        return 0
+    # Get log average true range, 
+    atr = ta.atr(np.log(data['high']), np.log(data['low']), np.log(data['close']), lookback)
+
+    all_levels = [None] * len(data)
+    for i in range(lookback, len(data)):
+        i_start  = i - lookback
+        vals = np.log(data.iloc[i_start+1: i+1]['close'].to_numpy())
+        levels, peaks, props, price_range, pdf, weights= find_levels(vals, atr.iloc[i], first_w, atr_mult, prom_thresh)
+        all_levels[i] = levels
+        
+    return all_levels
+
+def sr_penetration_signal(data: pd.DataFrame, levels: list):
+    signal = np.zeros(len(data))
+    curr_sig = 0.0
+    close_arr = data['close'].to_numpy()
+    for i in range(1, len(data)):
+        if levels[i] is None:
+            continue
+
+        last_c = close_arr[i - 1]
+        curr_c = close_arr[i]
+
+        
+        for level in levels[i]:
+            if curr_c > level and last_c <= level: # Close cross above line
+                curr_sig = 1.0
+            elif curr_c < level and last_c >= level: # Close cross below line
+                curr_sig = -1.0
+
+        signal[i] = curr_sig
+    return signal
+
+def get_trades_from_signal(data: pd.DataFrame, signal: np.array):
+    long_trades = []
+    short_trades = []
+
+    close_arr = data['close'].to_numpy()
+    last_sig = 0.0
+    open_trade = None
+    idx = data.index
+    for i in range(len(data)):
+        if signal[i] == 1.0 and last_sig != 1.0: # Long entry
+            if open_trade is not None:
+                open_trade[2] = idx[i] 
+                open_trade[3] = close_arr[i]
+                short_trades.append(open_trade)
+
+            open_trade = [idx[i], close_arr[i], -1, np.nan]
+        if signal[i] == -1.0  and last_sig != -1.0: # Short entry
+            if open_trade is not None:
+                open_trade[2] = idx[i] 
+                open_trade[3] = close_arr[i]
+                long_trades.append(open_trade)
+
+            open_trade = [idx[i], close_arr[i], -1, np.nan]
+
+        last_sig = signal[i]
+
+    long_trades = pd.DataFrame(long_trades, columns=['entry_time', 'entry_price', 'exit_time', 'exit_price'])
+    short_trades = pd.DataFrame(short_trades, columns=['entry_time', 'entry_price', 'exit_time', 'exit_price'])
+
+    lot_size = float(1000)
+    long_trades['percent'] = (long_trades['exit_price'] - long_trades['entry_price']) / long_trades['entry_price'] 
+    short_trades['percent'] = -1 * (short_trades['exit_price'] - short_trades['entry_price']) / short_trades['entry_price']
+    long_trades['profit'] = long_trades['percent'] * lot_size
+    short_trades['profit'] = short_trades['percent'] * lot_size
+    long_trades = long_trades.set_index('entry_time')
+    short_trades = short_trades.set_index('entry_time')
+    return long_trades, short_trades 
+
+
+if __name__ == '__main__':
+   
+    # Trend following strategy
+    # "D:\Downloads\EURUSD_Candlestick_1_D_BID_05.05.2003-28.10.2023.csv"
+    # "D:\Downloads\BTCUSDT86400.csv"
+    data = pd.read_csv(r"D:\Downloads\BTCUSDT86400.csv", nrows = 100)
+    data['date'] = data['date'].astype('datetime64[s]')
+    data = data.set_index('date')
+    plt.style.use('dark_background') 
+    levels = support_resistance_levels(data, 365, first_w=0.1, atr_mult=1.0)
     
-    pivotHigh = 1
-    pivotLow = 2
-    for i in range(candle-window, candle+window)+1:
-        if df.iloc[candle].low > df.iloc[i].low:
-            pivotLow = 0
-        if df.iloc[candle].high < df.iloc[i].high:
-            pivotHigh = 0
-    if (pivotHigh and pivotLow):
-        return 3
-    elif pivotHigh:
-        return pivotHigh
-    elif pivotLow:
-        return pivotLow
-    else:
-        return 0
-    
 
-# window size
-window = 10
-df['isPivot'] = df.apply(lambda x: isPivot(x.name,window), axis=1)
+    data['sr_signal'] = sr_penetration_signal(data, levels)
+    data['log_ret'] = np.log(data['close']).diff().shift(-1)
+    data['sr_return'] = data['sr_signal'] * data['log_ret']
 
-def pointpos(x):
-    if x['isPivot'] == 2:
-        return x['low']-1e-3
-    elif x['isPivot'] == 1:
-        return x['isPivot']+le-3
-    else:
-        return np.nan
-df['pointpos'] = df.apply(lambda row: pointpos(row), axis=1)
+    long_trades, short_trades = get_trades_from_signal(data, data['sr_signal'].to_numpy())
+    #print(data)
 
+def test_trades():
+    print("Long Trades")
+    print (long_trades)
+    print("")
+    print("Short Trades")
+    print (short_trades)
+    print("Long Trades: $"+str(round(sum(long_trades['profit']),2)))
+    print("Short Trades: $"+str(round(sum(short_trades['profit']),2)))
 
-# new section
-dfpl = df[300:500]
-fig = go.figure(data=[go.Candlestick(x=dfpl.index,
-                open=dfpl['open'],
-                high=dfpl['high'],
-                low=dfpl['low'],
-                close=dfpl['close'])])
+def plotting():
+    # Plot closing prices
+    plt.figure(figsize=(20, 6))
+    plt.plot(data.index, data['close'], color='blue', label='Close Price')
+    plt.plot(data.index, data['open'], color='red', label='Open Price')
 
-fig.add_scatter(x=dfpl.index, y=dfpl['pointpos'], mode="markers",
-                marker=dict(size=5, color="MediumPurple"),
-                name="pivot")
-fig.update_layout(xaxis_rangeslider_visible=False)
-fig.show()
+    # Plot support and resistance levels
+    for levels_list in levels:
+        if levels_list is not None:
+            plt.plot(data.index[-len(levels_list):], levels_list, marker='.', linestyle='', color='red')
+
+    # Plot buy signals
+    #plt.plot(data.index[data['sr_signal'] == 1], data['close'][data['sr_signal'] == 1],
+            #'^', markersize=3, color='green', lw=0, label='Buy Signal')
+
+    # Plot sell signals
+    #plt.plot(data.index[data['sr_signal'] == -1], data['close'][data['sr_signal'] == -1],
+            #'v', markersize=3, color='red', lw=0, label='Sell Signal')
+
+    # Customize the plot
+    plt.title('Support and Resistance Levels')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+#test_trades()
+#plotting()
 
