@@ -11,6 +11,7 @@ import pandas_ta as ta
 # first_w varies weightage of prices depending on length of time from present
 # atr_mult affects smoothing of KDE
 # As prom_thresh >, only resistance levels with greater significance taken 
+
 def find_levels( 
         price: np.array, atr: float, # Log closing price, and log atr 
         first_w: float = 0.1, 
@@ -155,6 +156,8 @@ def test_trades():
     print("")
     print("Short Trades")
     print (short_trades)
+    print("")
+    print("Trades taken: "+ str(len(long_trades)+len(short_trades)))
     print("Long Trades: $"+str(long_profit))
     print("Short Trades: $"+str(short_profit))
     print("Profit: $"+str(long_profit + short_profit))
@@ -163,7 +166,7 @@ def plotting():
     # Plot closing prices
     plt.figure(figsize=(20, 6))
     plt.plot(data.index, data['close'], color='blue', label='Close Price')
-    plt.plot(data.index, data['open'], color='red', label='Open Price')
+    #plt.plot(data.index, data['open'], color='red', label='Open Price')
 
     # Plot support and resistance levels
     for levels_list in levels:
@@ -186,6 +189,15 @@ def plotting():
     plt.grid(True)
     plt.show()
 
-test_trades()
-#plotting()
+print("Action list:")
+print("1. Test trades")
+print("2. Plot graph")
+selection = int(input("Select a number: "))
+if selection == 1: 
+    test_trades()
+elif selection == 2:
+    plotting()
+else:
+    print("Error")
+
 
