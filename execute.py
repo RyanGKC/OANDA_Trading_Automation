@@ -14,5 +14,5 @@ git status
 git branch -c [insert branch name]
 git add -m or git add . to add all
 git commit -m "insert text"
-git commit origin head
+git push origin head
 '''
