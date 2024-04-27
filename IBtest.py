@@ -58,7 +58,7 @@ class Bot():
 
         #Place the order
         self.ib.placeOrder(1, contract, order)
-        
+
     #listen to socket in seperate thread
     def run_loop(self):
         self.ib.run()
@@ -69,4 +69,3 @@ class Bot():
 
 #Start Bot
 bot = Bot()
-
