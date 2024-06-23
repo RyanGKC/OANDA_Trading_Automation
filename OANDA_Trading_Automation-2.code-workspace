@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "TestDrive",
+			"path": "../VS Code/TestDrive"
+		},
+		{
+			"path": "../VS Code/HTML"
+		}
+	],
+	"settings": {}
+}

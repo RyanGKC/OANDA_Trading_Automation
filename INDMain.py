@@ -5,15 +5,15 @@ import mplfinance as mpf
 import scipy
 import math
 import pandas_ta as ta
-#from AVtest import data
+# from AVtest import data
 
-# Consructs market profile using logarithmic pricing
+# Constructs market profile using logarithmic pricing
 # first_w varies weightage of prices depending on length of time from present
 # atr_mult affects smoothing of KDE
 # As prom_thresh >, only resistance levels with greater significance taken 
 
 def find_levels( 
-        price: np.array, atr: float, # Log closing price, and log atr 
+        price: np.array, atr: float,  # Log closing price, and log atr
         first_w: float = 0.1, 
         atr_mult: float = 1.0, 
         prom_thresh: float = 0.05
@@ -35,7 +35,7 @@ def find_levels(
     max_v = np.max(price)
     step = (max_v - min_v) / 200
     price_range = np.arange(min_v, max_v, step)
-    pdf = kernal(price_range) # Market profile
+    pdf = kernal(price_range)  # Market profile
 
     # Find significant peaks in the market profile
     pdf_max = np.max(pdf)
@@ -47,8 +47,6 @@ def find_levels(
         levels.append(np.exp(price_range[peak]))
 
     return levels, peaks, props, price_range, pdf, weights
-
-
 
 
 def support_resistance_levels(
@@ -128,13 +126,18 @@ def get_trades_from_signal(data: pd.DataFrame, signal: np.array):
     return long_trades, short_trades 
 
 
+csv_storage = {
+    "EURUSD": "D:\Downloads\EURUSD_Candlestick_1_D_BID_05.05.2003-28.10.2023.csv",
+    "BTCUSDT": "D:\Downloads\BTCUSDT86400.csv",
+    "TESLA": "D:\Downloads\esla-stock-price.csv",
+}
+
+
 if __name__ == '__main__':
    
     # Trend following strategy
-    # "D:\Downloads\EURUSD_Candlestick_1_D_BID_05.05.2003-28.10.2023.csv"
-    # "D:\Downloads\BTCUSDT86400.csv"
-    # "D:\Downloads\tesla-stock-price.csv"
-    data = pd.read_csv(r"D:\Downloads\tesla-stock-price.csv")
+    file_choice = str(input("Select file: "))
+    data = pd.read_csv(csv_storage.get(file_choice))
     data['date'] = data['date'].astype('datetime64[s]')
     data = data.set_index('date')
     plt.style.use('dark_background') 
@@ -174,12 +177,12 @@ def plotting():
             plt.plot(data.index[-len(levels_list):], levels_list, marker='.', linestyle='', color='red')
 
     # Plot buy signals
-    #plt.plot(data.index[data['sr_signal'] == 1], data['close'][data['sr_signal'] == 1],
-            #'^', markersize=3, color='green', lw=0, label='Buy Signal')
+    plt.plot(data.index[data['sr_signal'] == 1], data['close'][data['sr_signal'] == 1],
+            '^', markersize=3, color='green', lw=0, label='Buy Signal')
 
     # Plot sell signals
-    #plt.plot(data.index[data['sr_signal'] == -1], data['close'][data['sr_signal'] == -1],
-            #'v', markersize=3, color='red', lw=0, label='Sell Signal')
+    plt.plot(data.index[data['sr_signal'] == -1], data['close'][data['sr_signal'] == -1],
+            'v', markersize=3, color='red', lw=0, label='Sell Signal')
 
     # Customize the plot
     plt.title('Support and Resistance Levels')
