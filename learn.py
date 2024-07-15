@@ -10,13 +10,13 @@ from matplotlib.ticker import MaxNLocator
 # atr_mult affects smoothing of KDE
 # As prom_thresh >, only resistance levels with greater significance taken 
 
-# array creation to store iteration data
+# Array creation to store iteration data
 profit_map = []
 first_w_map = []
 atr_mult_map = []
 prom_thresh_map = []
 
-# variable declaration
+# Variable declaration
 first_w = 0.1
 atr_mult = 1.0
 prom_thresh = 0.05
@@ -29,7 +29,7 @@ csv_storage = {
     "TESLA": "D:\Downloads\esla-stock-price.csv",
 }
 
-# prints detailed output for single iteration
+# Prints detailed output for single iteration
 def test_trades():
     print("Long Trades")
     print (long_trades)
@@ -43,7 +43,7 @@ def test_trades():
     print("Profit: $"+str(long_profit + short_profit))
 
 
-# plots data
+# Plots data
 def single_plot():
     # Plot closing prices
     plt.figure(figsize=(20, 6))
@@ -72,7 +72,7 @@ def single_plot():
     plt.show()
 
 
-# plots total profit against iteration count
+# Plots total profit against iteration count
 def sum_plot():
     global profit_map
     plt.figure(figsize=(15, 20))
@@ -89,7 +89,7 @@ def sum_plot():
     plt.show()
 
 
-# logs iteration data into an array
+# Logs iteration data into an array
 def data_log (profit, first_w, atr_mult, prom_thresh):
     profit_map.append(profit)
     first_w_map.append(first_w)
@@ -97,14 +97,14 @@ def data_log (profit, first_w, atr_mult, prom_thresh):
     prom_thresh_map.append(prom_thresh)
     return profit_map, first_w_map, atr_mult_map, prom_thresh_map
 
-
+# Displays total profit
 def test_trades_adjust():
     global profit
     profit = long_profit + short_profit
     print("Profit: $"+str(profit))
 
 
-# prints parameters used to obtain max_profit
+# Prints parameters used to obtain max_profit
 def max_array ():
     global profit_map, first_w_map, atr_mult_map, prom_thresh_map
     max_item = profit_map.index(max(profit_map)) + 1
@@ -209,6 +209,7 @@ while first_w < 0.5:
                             curr_sig = -1.0
 
                     signal[i] = curr_sig
+                    # If signal == 1, buy / If signal == -1, then sell
                 return signal
 
 
@@ -266,7 +267,7 @@ while first_w < 0.5:
                 data['sr_return'] = data['sr_signal'] * data['log_ret']
 
                 long_trades, short_trades = get_trades_from_signal(data, data['sr_signal'].to_numpy())
-
+                # Rounds off calculated profit to 2dp
                 long_profit = float(round(sum(long_trades['profit']),2))
                 short_profit = float(round(sum(short_trades['profit']),2))
                 test_trades_adjust()
@@ -279,19 +280,6 @@ sum_plot()
           
 
       
-
-
-   
-    
-
-# insert find_levels () into while loop
-# limit csv file size
-# log profit into array
-# plot data on matplotlib
-
-
-# from AVtest import data
-
 # Constructs market profile using logarithmic pricing
 # first_w varies weightage of prices depending on length of time from present
 # atr_mult affects smoothing of KDE

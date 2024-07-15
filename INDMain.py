@@ -83,7 +83,8 @@ def sr_penetration_signal(data: pd.DataFrame, levels: list):
                 curr_sig = 1.0
             elif curr_c < level and last_c >= level: # Close cross below line
                 curr_sig = -1.0
-
+        
+        # If signal == 1, buy order / If signal == -1, sell order
         signal[i] = curr_sig
     return signal
 
@@ -96,14 +97,16 @@ def get_trades_from_signal(data: pd.DataFrame, signal: np.array):
     open_trade = None
     idx = data.index
     for i in range(len(data)):
-        if signal[i] == 1.0 and last_sig != 1.0: # Long entry
+        # If previous signal is of the same type, breaks loop
+        if signal[i] == 1.0 and last_sig != 1.0: 
+            # If another trade is open, breaks loop
             if open_trade is not None:
                 open_trade[2] = idx[i] 
                 open_trade[3] = close_arr[i]
                 short_trades.append(open_trade)
 
             open_trade = [idx[i], close_arr[i], -1, np.nan]
-        if signal[i] == -1.0  and last_sig != -1.0: # Short entry
+        if signal[i] == -1.0  and last_sig != -1.0: 
             if open_trade is not None:
                 open_trade[2] = idx[i] 
                 open_trade[3] = close_arr[i]
@@ -113,19 +116,23 @@ def get_trades_from_signal(data: pd.DataFrame, signal: np.array):
 
         last_sig = signal[i]
 
+    # Object creation
     long_trades = pd.DataFrame(long_trades, columns=['entry_time', 'entry_price', 'exit_time', 'exit_price'])
     short_trades = pd.DataFrame(short_trades, columns=['entry_time', 'entry_price', 'exit_time', 'exit_price'])
 
+    # Lot size provides magnitude to the profit calculated
     lot_size = float(1000)
+    # Calculated trade profit based on percentage 
     long_trades['percent'] = (long_trades['exit_price'] - long_trades['entry_price']) / long_trades['entry_price'] 
     short_trades['percent'] = -1 * (short_trades['exit_price'] - short_trades['entry_price']) / short_trades['entry_price']
+    # Places profit from each trade into an array
     long_trades['profit'] = long_trades['percent'] * lot_size
     short_trades['profit'] = short_trades['percent'] * lot_size
     long_trades = long_trades.set_index('entry_time')
     short_trades = short_trades.set_index('entry_time')
     return long_trades, short_trades 
 
-
+# Stores currency data files
 csv_storage = {
     "EURUSD": "D:\Downloads\EURUSD_Candlestick_1_D_BID_05.05.2003-28.10.2023.csv",
     "BTCUSDT": "D:\Downloads\BTCUSDT86400.csv",
@@ -135,9 +142,10 @@ csv_storage = {
 
 if __name__ == '__main__':
    
-    # Trend following strategy
+    # Selects file from csv_storage
     file_choice = str(input("Select file: "))
     data = pd.read_csv(csv_storage.get(file_choice))
+    # Type casts date column in csv file
     data['date'] = data['date'].astype('datetime64[s]')
     data = data.set_index('date')
     plt.style.use('dark_background') 
@@ -151,8 +159,8 @@ if __name__ == '__main__':
 
     long_profit = float(round(sum(long_trades['profit']),2))
     short_profit = float(round(sum(short_trades['profit']),2))
-    #print(data)
 
+# Displays trade info for each currency data file
 def test_trades():
     print("Long Trades")
     print (long_trades)
@@ -165,6 +173,7 @@ def test_trades():
     print("Short Trades: $"+str(short_profit))
     print("Profit: $"+str(long_profit + short_profit))
 
+# Data plotting function
 def plotting():
     # Plot closing prices
     plt.figure(figsize=(20, 6))
@@ -192,15 +201,19 @@ def plotting():
     plt.grid(True)
     plt.show()
 
-print("Action list:")
-print("1. Test trades")
-print("2. Plot graph")
-selection = int(input("Select a number: "))
-if selection == 1: 
-    test_trades()
-elif selection == 2:
-    plotting()
-else:
-    print("Error")
+# Runs testing program
+def initiate_testing():
+    print("Action list:")
+    print("1. Test trades")
+    print("2. Plot graph")
+    selection = int(input("Select a number: "))
+    if selection == 1: 
+        test_trades()
+    elif selection == 2:
+        plotting()
+    else:
+        print("Error")
 
-
+# initiate_testing() runs program for testing datasets
+# test_trades() displays trade info for each currency data file
+# plotting() plots price against time along with point of execution of trade including its type
