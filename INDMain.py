@@ -176,13 +176,13 @@ def plotting():
         if levels_list is not None:
             plt.plot(data.index[-len(levels_list):], levels_list, marker='.', linestyle='', color='red')
 
-    # Plot buy signals
+    # Plot buy signals | sr_signal indicates buy or sell
     plt.plot(data.index[data['sr_signal'] == 1], data['close'][data['sr_signal'] == 1],
-            '^', markersize=3, color='green', lw=0, label='Buy Signal')
+            '.', markersize=3, color='green', lw=0, label='Buy Signal')
 
     # Plot sell signals
     plt.plot(data.index[data['sr_signal'] == -1], data['close'][data['sr_signal'] == -1],
-            'v', markersize=3, color='red', lw=0, label='Sell Signal')
+            '.', markersize=3, color='red', lw=0, label='Sell Signal')
 
     # Customize the plot
     plt.title('Support and Resistance Levels')

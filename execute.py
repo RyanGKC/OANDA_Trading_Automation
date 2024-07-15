@@ -13,6 +13,6 @@ import pandas_ta as ta
 git status
 git branch -c [insert branch name]
 git add -m or git add . to add all
-git commit -m "insert text"
+git commit -m "insert text" 
 git push origin head
 '''
