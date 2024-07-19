@@ -95,3 +95,4 @@ venv/Lib/site-packages/pluggy/__pycache__/_warnings.cpython-312.pyc
 venv/Lib/site-packages/pytest/__pycache__/__init__.cpython-312.pyc
 venv/Lib/site-packages/pytest/__pycache__/__main__.cpython-312.pyc
 __pycache__/INDMain.cpython-312-pytest-8.2.0.pyc
+virtualenv/
